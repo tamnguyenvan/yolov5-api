@@ -1,16 +1,18 @@
 import sys
 import os
+import wget
+import mimetypes
 sys.path.insert(0, os.path.realpath(os.path.pardir))
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from celery_tasks.tasks import predict_image
+from celery_tasks.tasks import predict_image, predict_video
 from celery.result import AsyncResult
 from models import Task, Prediction
 import uuid
 import logging
-from pydantic.typing import List
+from pydantic.typing import List, Optional
 import numpy as np
 
 UPLOAD_FOLDER = 'uploads'
@@ -41,30 +43,71 @@ app.add_middleware(
 
 
 @app.post('/api/process')
-async def process(files: List[UploadFile] = File(...)):
+async def process(files: Optional[List[UploadFile]] = File(None), url: Optional[str] = Form(None)):
     tasks = []
     try:
-        for file in files:
+        if files is None and url is None:
+            raise Exception('No input found')
+
+        if files is not None:
+            for file in files:
+                d = {}
+                try:
+                    name = str(uuid.uuid4()).split('-')[0]
+                    ext = file.filename.split('.')[-1]
+                    file_name = f'{UPLOAD_FOLDER}/{name}.{ext}'
+                    # start task prediction
+                    # Check file type (image or video)
+                    # TODO: other cases
+                    mimestart = mimetypes.guess_type(file_name)[0]
+                    if mimestart is not None:
+                        mimestart = mimestart.split('/')[0]
+                        if mimestart in ('video', 'image'):
+                            with open(file_name, 'wb+') as f:
+                                f.write(file.file.read())
+                            f.close()
+
+                            if mimestart == 'image':
+                                task_id = predict_image.delay(os.path.join('api', file_name))
+                                d['task_id'] = str(task_id)
+                                d['status'] = 'PROCESSING'
+                                d['url_result'] = f'/api/result/{task_id}'
+                            elif mimestart == 'video':
+                                task_id = predict_video.delay(os.path.join('api', file_name))
+                                d['task_id'] = str(task_id)
+                                d['status'] = 'PROCESSING'
+                                d['url_result'] = f'/api/result/{task_id}'
+                except Exception as ex:
+                    logging.info(ex)
+                    d['task_id'] = str(task_id)
+                    d['status'] = 'ERROR'
+                    d['url_result'] = ''
+                tasks.append(d)
+        elif url is not None:
             d = {}
             try:
-                name = str(uuid.uuid4()).split('-')[0]
-                ext = file.filename.split('.')[-1]
-                file_name = f'{UPLOAD_FOLDER}/{name}.{ext}'
-                with open(file_name, 'wb+') as f:
-                    f.write(file.file.read())
-                f.close()
-
-                # start task prediction
-                task_id = predict_image.delay(os.path.join('api', file_name))
-                d['task_id'] = str(task_id)
-                d['status'] = 'PROCESSING'
-                d['url_result'] = f'/api/result/{task_id}'
+                path = wget.download(url, out=f'{UPLOAD_FOLDER}')
+                print('path', path)
+                mimestart = mimetypes.guess_type(path)[0]
+                if mimestart is not None:
+                    mimestart = mimestart.split('/')[0]
+                    if mimestart == 'image':
+                        task_id = predict_image.delay(os.path.join('api', path))
+                        d['task_id'] = str(task_id)
+                        d['status'] = 'PROCESSING'
+                        d['url_result'] = f'/api/result/{task_id}'
+                    elif mimestart == 'video':
+                        task_id = predict_video.delay(os.path.join('api', path))
+                        d['task_id'] = str(task_id)
+                        d['status'] = 'PROCESSING'
+                        d['url_result'] = f'/api/result/{task_id}'
             except Exception as ex:
                 logging.info(ex)
                 d['task_id'] = str(task_id)
                 d['status'] = 'ERROR'
                 d['url_result'] = ''
             tasks.append(d)
+        
         return JSONResponse(status_code=202, content=tasks)
     except Exception as ex:
         logging.info(ex)

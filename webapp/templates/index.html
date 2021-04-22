@@ -18,9 +18,13 @@
     <div class="container">
         <div class="col-sm-12">
             <div class="form-row">
-                <div class="form-group col-md-8">
-                    <label for="file" id="label_file">&nbsp;</label>
+                <div class="form-group col-md-4">
+                    <label for="file" id="label_file">From local files</label>
                     <input class="form-control" type="file" id="input_file" multiple />
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="input_url" id="label_url">or url</label>
+                    <input class="form-control" type="text" id="input_url"/>
                 </div>
                 <div class="form-group col-md-4">
                     <label>&nbsp;</label>
@@ -44,7 +48,16 @@
                 </div>
                 <div class="form-row" id="row_detail">
                     <div class="col-md-3"><textarea id="result_txt" style="height: 800px; font-size: 12px;"></textarea></div>
-                    <div class="col-md-9"><a id="result_link"><img id="result_img" width="600px" /></a></div>
+                    <div class="col-md-9">
+                        <div>
+                            <a id="result_image_link">
+                                <img id="result_img" width="600px" />
+                            </a>
+                            <a id="result_video_link">
+                            </a>
+                        </div>
+                        </a>
+                    </div>
                 </div>
 
             </div>

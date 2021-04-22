@@ -1,3 +1,4 @@
+version: "3"
 services:  
   rabbitmq:
     container_name: rabbitmq
@@ -29,5 +30,7 @@ services:
       dockerfile: webapp/Dockerfile
       context: .
     command: sh -c "cd /app && uvicorn app:app --host 0.0.0.0 --port 80 --reload"
+    volumes:
+      - ./webapp:/app
     ports:
       - "80:80"

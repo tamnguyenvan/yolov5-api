@@ -8,9 +8,15 @@ jQuery(document).ready(function () {
     $("#row_results").hide();
     $('#btn-process').on('click', function () {
         var form_data = new FormData();
-        files = $('#input_file').prop('files')
-        for (i = 0; i < files.length; i++)
-            form_data.append('files', $('#input_file').prop('files')[i]);
+        url = $('#input_url')[0].value
+        if (url.length > 0) {
+            form_data.append('url', url)
+        }
+        else {
+            files = $('#input_file').prop('files')
+            for (i = 0; i < files.length; i++)
+                form_data.append('files', $('#input_file').prop('files')[i]);
+        }
 
         $.ajax({
             url: URL + '/api/process',
@@ -75,8 +81,25 @@ jQuery(document).ready(function () {
             if (data['status'] == 'SUCCESS') {
                 $('#row_detail').show()
                 $('#result_txt').val(JSON.stringify(res.result['bbox'], undefined, 4))
-                $('#result_img').attr('src', URL + '/' + res.result.file_name)
-                $('#result_link').attr('href', URL + '/' + res.result.file_name)
+                console.log(res.result['mimetype']);
+                if (res.result['mimetype'] == 'image') {
+                    $('#result_img').attr('src', URL + '/' + res.result.file_name)
+                    $('#result_image_link').attr('href', URL + '/' + res.result.file_name)
+                    $('#result_image_link').show()
+                    $('#result_video_link').hide()
+                } else if (res.result['mimetype'] == 'video') {
+                    // $('#result_video').attr('src', URL + '/' + res.result.file_name)
+                    // $('#result_video')[0].load();
+                    // $('#result_video_link').attr('href', URL + '/' + res.result.file_name)
+                    // $('#result_image_link').hide()
+
+                    // $('#result_video').attr('src', URL + '/' + res.result.file_name)
+                    // $('#result_video_link video')[0].load()
+                    $('#result_video_link').attr('href', URL + '/' + res.result.file_name) 
+                    $('#result_video_link').text(URL + '/' + res.result.file_name)
+                    $('#result_video_link').show()
+                    $('#result_image_link').hide()
+                }
             } else {
                 alert('Result not ready or already consumed!')
                 $('#row_detail').hide()

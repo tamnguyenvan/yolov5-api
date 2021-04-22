@@ -28,3 +28,15 @@ def predict_image(self, data):
             self.retry(countdown=2)
         except MaxRetriesExceededError as ex:
             return {'status': 'FAIL', 'result': 'max retried achieved'}
+
+
+@app.task(ignore_result=False, bind=True, base=PredictTask)
+def predict_video(self, data):
+    try:
+        data_pred = self.model.predict_video(data)
+        return {'status': 'SUCCESS', 'result': data_pred}
+    except Exception as ex:
+        try:
+            self.retry(countdown=2)
+        except MaxRetriesExceededError as ex:
+            return {'status': 'FAIL', 'result': 'max retried achieved'}
