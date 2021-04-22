@@ -58,8 +58,6 @@ class YoloModel:
                     if not ret:
                         break
                     
-                    if frame_cnt > 25:
-                        break
                     frame_cnt += 1
                     result = self.model(frame)
                     result.render()
